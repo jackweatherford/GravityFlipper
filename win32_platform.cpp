@@ -1,8 +1,11 @@
 #include "utils.cpp"
 
 #include <windows.h> // win32 platform
+#include <WindowsX.h> // GET_X/Y_LPARAM(lParam)
 
 global_variable bool game_running = true;
+global_variable bool new_click = false;
+global_variable POINT click;
 
 struct Render_State {
 	int height, width;
@@ -46,6 +49,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			render_state.bitmap_info.bmiHeader.biCompression = BI_RGB;
 		} break;
 		
+		case WM_LBUTTONDOWN: {
+			new_click = true;
+			click.x = GET_X_LPARAM(lParam);
+			click.y = GET_Y_LPARAM(lParam);
+		} break;
+		
 		default: {
 			result = DefWindowProc(hwnd, uMsg, wParam, lParam);
 		}
@@ -66,9 +75,18 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
 	RegisterClass(&window_class);
 	
 	// Create window
+	int w = 1280;
+	int h = 720;
 	HWND window = CreateWindow(window_class.lpszClassName, "Gravity Flipper",
 					WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
-					1280, 720, 0, 0, hInstance, 0);
+					w, h, 0, 0, hInstance, 0);
+	/*{
+		// Fullscreen
+		SetWindowLong(window, GWL_STYLE, GetWindowLong(window, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
+		MONITORINFO mi = { sizeof(mi) };
+		GetMonitorInfo(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &mi);
+		SetWindowPos(window, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top, SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+	}*/
 	HDC hdc = GetDC(window);
 	
 	Input input = {};
@@ -137,7 +155,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
 		}
 		
 		// Simulate the game
-		simulate_game(&input, dt);
+		simulate_game(&input, dt, click, &new_click);
 		
 		// Render the game
 		StretchDIBits(hdc, 0, 0, render_state.width, render_state.height, 0, 0, render_state.width,

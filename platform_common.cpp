@@ -14,3 +14,10 @@ enum {
 struct Input {
 	Button_State buttons[BUTTON_COUNT];
 };
+
+enum Gamemode {
+	MENU,
+	INGAME,
+	PAUSE,
+	GAMEOVER
+};

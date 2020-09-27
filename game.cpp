@@ -18,17 +18,17 @@ float player_dp_y = 150;
 float coin_half_width = 2.5, coin_half_height = 3;
 float coin_p_x = 0, coin_p_y =  0;
 
+float missile_half_width = 5, missile_half_height = 3;
+float missile_p_x = -game_half_width*2 - missile_half_width, missile_p_y = 0;
+float missile_dp_x = 150;
+
 int score = 0;
+int frame_count = 0;
 
 bool first = true;
 bool in_air = false;
 bool on_floor = true;
 bool queue_jump = false;
-
-enum Gamemode {
-	MENU,
-	INGAME,
-};
 
 Gamemode current_gamemode = MENU;
 
@@ -36,17 +36,36 @@ internal_function void
 simulate_game(Input * input, float dt, POINT click, bool * new_click) {
 	
 	if (current_gamemode == INGAME) {
-		// First time coin setup
+		// First time setup
 		if (first) {
 			// Pause on menu
 			Sleep(250);
 			// Seed randomness
 			srand(time(NULL));
+			// Coin init
 			// min + rand() % ( max - min + 1 )
 			coin_p_x = -game_half_width + 15 + rand() % (int)(game_half_width * 2 - 29);
 			coin_p_y = -game_half_height + 15 + rand() % (int)(game_half_height * 2 - 29);
+			
+			// Missile init
+			missile_p_y = -game_half_height + 15 + rand() % (int)(game_half_height * 2 - 29);
+			
+			player_p_x = 0, player_dp_x = 0, player_ddp_x = 0;
+
+			player_p_y = -game_half_height;
+
+			missile_p_x = -game_half_width*2 - missile_half_width;
+
+			score = 0;
+			frame_count = 0;
+
+			in_air = false;
+			on_floor = true;
+			queue_jump = false;
+			
 			first = false;
 		}
+		frame_count++;
 		
 		// Background color
 		clear_screen(0x1D2953);
@@ -94,10 +113,19 @@ simulate_game(Input * input, float dt, POINT click, bool * new_click) {
 			player_dp_x = 0;
 		}
 		
+		// Missile movement
+		missile_p_x += missile_dp_x * dt;
+		
+		// Reset missile if it goes off screen
+		if (missile_p_x - missile_half_width > game_half_width) {
+			missile_p_x = -game_half_width*2 - missile_half_width;
+			missile_p_y = -game_half_height + 15 + rand() % (int)(game_half_height * 2 - 29);
+		}
+		
 		// Draw coin
 		draw_rect(coin_p_x, coin_p_y, coin_half_width, coin_half_height, 0xFFDF00);
 		
-		// If player colides with coin
+		// If player collides with coin
 		if (player_p_x - player_half_width/2 < coin_p_x + coin_half_width/2 && 
 			player_p_x + player_half_width/2 > coin_p_x - coin_half_width/2 &&
 			player_p_y - player_half_height < coin_p_y + coin_half_height &&
@@ -114,7 +142,21 @@ simulate_game(Input * input, float dt, POINT click, bool * new_click) {
 		
 		// Draw score
 		draw_number(score, game_half_width/1.1, game_half_height/1.13, 1.f, 0x00FF00);
-	} else {
+		
+		// Draw timer
+		// draw_number(frame_count / 180, -game_half_width/1.1, game_half_height/1.13, 1.f, 0x00FF00);
+		
+		// Draw missile
+		draw_rect(missile_p_x, missile_p_y, missile_half_width, missile_half_height, 0xFF0000);
+		
+		// If player collides with missile
+		if (player_p_x - player_half_width/2 < missile_p_x + missile_half_width/2 && 
+			player_p_x + player_half_width/2 > missile_p_x - missile_half_width/2 &&
+			player_p_y - player_half_height < missile_p_y + missile_half_height &&
+			player_p_y + player_half_height > missile_p_y - missile_half_height) {
+			current_gamemode = GAMEOVER;
+		}
+	} else if (current_gamemode == MENU) {
 		// Background color
 		clear_screen(0x1D2953);
 		
@@ -122,7 +164,7 @@ simulate_game(Input * input, float dt, POINT click, bool * new_click) {
 			*new_click = false;
 			if(click.x >= 536 && click.y >= 355 &&
 			   click.x <= 742 && click.y <= 437) {
-			   draw_text("GRAVITY FLIPPER", -43, 40, 2, 0xFF5500);
+			    draw_text("GRAVITY FLIPPER", -43, 40, 2, 0xFF5500);
 				draw_rect(0, -3, 16, 6, 0xCCCCCC);
 				draw_text("START", -7, 0, 1, 0x000000);
 				current_gamemode = INGAME;
@@ -131,6 +173,22 @@ simulate_game(Input * input, float dt, POINT click, bool * new_click) {
 			draw_text("GRAVITY FLIPPER", -43, 40, 2, 0xFF5500);
 			draw_rect(0, -3, 16, 6, 0x00FF00);
 			draw_text("START", -7, 0, 1, 0x000000);
+		}
+	} else if (current_gamemode == GAMEOVER) {
+		if (*new_click) {
+			*new_click = false;
+			if(click.x >= 497 && click.y >= 355 &&
+			   click.x <= 780 && click.y <= 437) {
+				draw_text("GAME OVER", -25, 40, 2, 0xFF0000);
+				draw_rect(0, -3, 22, 6, 0xCCCCCC);
+				draw_text("RESTART", -10, 0, 1, 0x000000);
+				current_gamemode = INGAME;
+				first = true;
+			 }
+		} else {
+			draw_text("GAME OVER", -25, 40, 2, 0xFF0000);
+			draw_rect(0, -3, 22, 6, 0x00FF00);
+			draw_text("RESTART", -10, 0, 1, 0x000000);
 		}
 	}
 }

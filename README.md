@@ -9,6 +9,7 @@ A simple C++ game **Work in progress**
 
 ## Goal:
   - Collect yellow coins to increase score
+  - Avoid red missiles
 
 ## Controls:
   - Left/right arrow keys: Move left/right
